@@ -17,7 +17,7 @@ test:
 
 dataloader:
   train:
-    batch_size: 2
+    batch_size: 7
     num_workers: 8
     persistent_workers: True
   val:
@@ -33,7 +33,7 @@ data:
   train:
     type: scannetv2_sample_graph_edge
     dataset: multi3drefer
-    data_root: data/
+    data_root: /nfs/data_todi/jli/Alessio_works/data_multi3dreder/
     prefix: train
     suffix: .pth
     training: True
@@ -50,7 +50,7 @@ data:
   val:
     type: scannetv2_sample_graph_edge
     dataset: multi3drefer
-    data_root: data/
+    data_root: /nfs/data_todi/jli/Alessio_works/data_multi3dreder/
     prefix: val
     suffix: .pth
     training: False

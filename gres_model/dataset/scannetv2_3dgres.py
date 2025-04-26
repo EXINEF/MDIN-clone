@@ -2,6 +2,7 @@ import glob, json, os
 import math
 import numpy as np
 import os.path as osp
+from configs.mine_config import USE_CLIP, CLIP_MODEL
 import pointgroup_ops
 import scipy.interpolate as interpolate
 import scipy.ndimage as ndimage
@@ -12,7 +13,7 @@ from typing import Dict, Sequence, Tuple, Union
 from tqdm import tqdm
 from gorilla import is_main_process
 import sng_parser
-from transformers import RobertaTokenizerFast
+from transformers import RobertaTokenizerFast, CLIPTokenizerFast
 
 MAX_NUM_OBJ = 132
 
@@ -139,7 +140,12 @@ class ScanNetDataset_sample_graph_edge(Dataset):
         self.nyu40id2class = self._get_nyu40id2class()
         self.sem2nyu = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39]
 
-        self.tokenizer = RobertaTokenizerFast.from_pretrained('./backbones/roberta-base/', local_files_only=True)
+        if USE_CLIP:
+            print(f'Using CLIP tokenizer: {CLIP_MODEL}')
+            self.tokenizer = CLIPTokenizerFast.from_pretrained(CLIP_MODEL)
+        else:
+            print('Using RoBERTa tokenizer')
+            self.tokenizer = RobertaTokenizerFast.from_pretrained('roberta-base')
 
 
 
@@ -520,10 +526,14 @@ class ScanNetDataset_sample_graph_edge(Dataset):
             lang_utterances.extend(lang_utterance)
             dense_mapss.extend(dense_maps)
 
-
-        token_dict = self.tokenizer.batch_encode_plus(
-            lang_utterances, padding="longest", return_tensors="pt"
-        )
+        if USE_CLIP:
+            token_dict = self.tokenizer.batch_encode_plus(
+                lang_utterances, padding="longest", return_tensors="pt", truncation=True, max_length=77
+            )
+        else:
+            token_dict = self.tokenizer.batch_encode_plus(
+                lang_utterances, padding="longest", return_tensors="pt"
+            )
         lang_tokenss = token_dict['input_ids']
         lang_masks = token_dict['attention_mask']
 
@@ -626,10 +636,16 @@ class ScanNetDataset_sample_graph_edge(Dataset):
             rel_char_span[r] = rel
             num_r = r+1
 
-        tokenized = self.tokenizer.batch_encode_plus(
-            [' '.join(anno['utterance'].replace(',', ' ,').split())],
-            padding="longest", return_tensors="pt"
-        )
+        if USE_CLIP:
+            tokenized = self.tokenizer.batch_encode_plus(
+                [' '.join(anno['utterance'].replace(',', ' ,').split())],
+                padding="longest", return_tensors="pt"
+            )
+        else:
+            tokenized = self.tokenizer.batch_encode_plus(
+                [' '.join(anno['utterance'].replace(',', ' ,').split())],
+                padding="longest", return_tensors="pt"
+            )
 
         target_positive_map = np.zeros((MAX_NUM_OBJ, 256))
         modify_positive_map = np.zeros((MAX_NUM_OBJ, 256))

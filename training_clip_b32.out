@@ -1,0 +1,4 @@
+set CUDA_VISIBLE_DEVICES as 0
+Using CLIP Text Model: openai/clip-vit-base-patch32
+Using CLIP tokenizer: openai/clip-vit-base-patch32
+Using CLIP tokenizer: openai/clip-vit-base-patch32

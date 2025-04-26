@@ -1,4 +1,5 @@
 import functools
+from configs.mine_config import CLIP_MODEL, USE_CLIP
 import pointgroup_ops
 import spconv.pytorch as spconv
 import torch
@@ -12,7 +13,7 @@ from .backbone import ResidualBlock, UBlock
 from .loss import Criterion, get_iou, get_iou_prob
 
 from .mdin import MDIN
-from transformers import RobertaModel
+from transformers import RobertaModel, CLIPTextModel
 from pointnet2.pointnet2_utils import FurthestPointSampling
 
 class MODEL(nn.Module):
@@ -66,8 +67,13 @@ class MODEL(nn.Module):
         self.decoder_param = mdin
         self.fps_num = fps_num
         # bert encoder
-        self.bert_encoder = RobertaModel.from_pretrained('./backbones/roberta-base')
-
+        if USE_CLIP:
+            self.bert_encoder = CLIPTextModel.from_pretrained(CLIP_MODEL)
+            print(f'Using CLIP Text Model: {CLIP_MODEL}')
+        else:
+            self.bert_encoder = RobertaModel.from_pretrained('roberta-base')
+            print('Using RoBERTa Model')
+        
         self.sampling_module = sampling_module
         # mdin
         self.mdin = MDIN(**mdin, sampling_module=sampling_module, sampling_module_kv=sampling_module_kv, in_channel=media)
@@ -123,7 +129,10 @@ class MODEL(nn.Module):
 
         sp_feats, sp_coords_float, fps_seed_sp, batch_offsets, sp_ins_labels, sem2inss = self.expand_and_fps(sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss, scenes_len)
         # sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss = self.expand(sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss, scenes_len)
-        lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks)[0]
+        if USE_CLIP:
+            lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks).last_hidden_state
+        else:
+            lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks)[0]
 
         out = self.mdin(sp_feats, fps_seed_sp, batch_offsets, lang_feats, lang_masks)
         
@@ -143,7 +152,10 @@ class MODEL(nn.Module):
 
         sp_feats, sp_coords_float, fps_seed_sp, batch_offsets, sp_ins_labels, sem2inss = self.expand_and_fps(sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss, scenes_len)
         # sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss = self.expand(sp_feats, sp_coords_float, batch_offsets, sp_ins_labels, sem2inss, scenes_len)
-        lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks)[0]
+        if USE_CLIP:
+            lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks).last_hidden_state
+        else:
+            lang_feats = self.bert_encoder(lang_tokenss, attention_mask=lang_masks)[0]
         
         out = self.mdin(sp_feats, fps_seed_sp, batch_offsets, lang_feats, lang_masks) 
         ret = self.predict_by_feat(scan_ids, object_idss, ann_ids, out, superpoints, gt_pmasks, gt_spmasks, dense_maps)

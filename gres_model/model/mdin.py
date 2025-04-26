@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+
+from configs.mine_config import USE_CLIP
 from .sample_model import SamplingModule
 from torch_scatter import scatter_max, scatter_mean, scatter
 import torch.nn.functional as F
@@ -250,7 +252,10 @@ class MDIN(nn.Module):
         self.lang_att = lang_att
         self.contrastive_align_loss = contrastive_align_loss
 
-        H = 768
+        if USE_CLIP:
+            H = 512
+        else:
+            H = 768
         self.lang_proj = nn.Linear(H, d_model)
         self.lang_norm = nn.LayerNorm(d_model)
         
